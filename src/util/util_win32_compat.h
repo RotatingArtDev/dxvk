@@ -8,7 +8,12 @@
 #include "log/log.h"
 
 inline HMODULE LoadLibraryA(LPCSTR lpLibFileName) {
-  return dlopen(lpLibFileName, RTLD_NOW);
+#ifdef __ANDROID__
+  // On Android, use RTLD_GLOBAL to allow loaded libraries to access system libraries
+  return dlopen(lpLibFileName, RTLD_LAZY | RTLD_GLOBAL);
+#else
+  return dlopen(lpLibFileName, RTLD_LAZY);
+#endif
 }
 
 inline void FreeLibrary(HMODULE module) {

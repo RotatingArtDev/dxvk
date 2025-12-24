@@ -1773,7 +1773,7 @@ namespace dxvk {
           m_cmd->addStatCtr(DxvkStatCounter::CmdDrawsMerged, count - 1u);
         }
 
-        if (unlikely(m_state.id.argBuffer.buffer()->hasGfxStores()))
+        if (m_state.id.argBuffer.buffer() != nullptr && unlikely(m_state.id.argBuffer.buffer()->hasGfxStores()))
           accessDrawBuffer(offset, count, stride, elementSize);
       } else {
         // If the pipeline has order-sensitive stores, submit one
@@ -1790,7 +1790,7 @@ namespace dxvk {
               argInfo.offset + offset, 1u, 0u);
           }
 
-          if (unlikely(m_state.id.argBuffer.buffer()->hasGfxStores()))
+          if (m_state.id.argBuffer.buffer() != nullptr && unlikely(m_state.id.argBuffer.buffer()->hasGfxStores()))
             accessDrawBuffer(offset, 1u, stride, elementSize);
 
           offset += stride;
@@ -1826,13 +1826,13 @@ namespace dxvk {
 
       m_cmd->addStatCtr(DxvkStatCounter::CmdDrawCalls, 1u);
 
-      if (unlikely(m_state.id.argBuffer.buffer()->hasGfxStores())) {
+      if (m_state.id.argBuffer.buffer() != nullptr && unlikely(m_state.id.argBuffer.buffer()->hasGfxStores())) {
         accessDrawBuffer(offset, maxCount, stride, Indexed
           ? sizeof(VkDrawIndexedIndirectCommand)
           : sizeof(VkDrawIndirectCommand));
       }
 
-      if (unlikely(m_state.id.cntBuffer.buffer()->hasGfxStores()))
+      if (m_state.id.cntBuffer.buffer() != nullptr && unlikely(m_state.id.cntBuffer.buffer()->hasGfxStores()))
         accessDrawCountBuffer(countOffset);
     }
   }
@@ -6518,8 +6518,15 @@ namespace dxvk {
   void DxvkContext::updateIndexBufferBinding() {
     m_flags.clr(DxvkContextFlag::GpDirtyIndexBuffer);
 
-    if (likely(m_state.vi.indexBuffer.length())) {
+    // Check both length and buffer pointer to avoid null pointer dereference
+    if (likely(m_state.vi.indexBuffer.length() && m_state.vi.indexBuffer.buffer() != nullptr)) {
       auto bufferInfo = m_state.vi.indexBuffer.getSliceInfo();
+
+      // Additional null check for buffer handle
+      if (unlikely(bufferInfo.buffer == VK_NULL_HANDLE)) {
+        m_cmd->cmdBindIndexBuffer2(VK_NULL_HANDLE, 0, VK_WHOLE_SIZE, m_state.vi.indexType);
+        return;
+      }
 
       VkDeviceSize align = m_state.vi.indexType == VK_INDEX_TYPE_UINT16 ? 2 : 4;
       VkDeviceSize length = bufferInfo.size & ~(align - 1);
@@ -6562,9 +6569,19 @@ namespace dxvk {
     for (uint32_t i = 0; i < m_state.gp.state.il.bindingCount(); i++) {
       uint32_t binding = m_state.gp.state.ilBindings[i].binding();
       
-      if (likely(m_state.vi.vertexBuffers[binding].length())) {
+      // Check both length and buffer pointer to avoid null pointer dereference
+      if (likely(m_state.vi.vertexBuffers[binding].length() && m_state.vi.vertexBuffers[binding].buffer() != nullptr)) {
         auto vbo = m_state.vi.vertexBuffers[binding].getSliceInfo();
         
+        // Additional null check for buffer handle
+        if (unlikely(vbo.buffer == VK_NULL_HANDLE)) {
+          buffers[i] = VK_NULL_HANDLE;
+          offsets[i] = 0;
+          lengths[i] = 0;
+          strides[i] = 0;
+          continue;
+        }
+
         buffers[i] = vbo.buffer;
         offsets[i] = vbo.offset;
         lengths[i] = vbo.size;

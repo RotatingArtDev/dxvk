@@ -254,7 +254,11 @@ namespace dxvk {
       VkResult status = m_vkl->vkCreateInstance(&info, nullptr, &instance);
 
       if (status != VK_SUCCESS) {
-        Logger::err("DxvkInstance::createInstance: Failed to create Vulkan instance");
+        Logger::err(str::format("DxvkInstance::createInstance: Failed to create Vulkan instance, VkResult = ", int32_t(status)));
+        // Print requested extensions for debugging
+        Logger::err(str::format("  Requested ", extensionNames.size(), " extensions:"));
+        for (const auto& ext : extensionNames)
+          Logger::err(str::format("    - ", ext));
         return false;
       }
     }

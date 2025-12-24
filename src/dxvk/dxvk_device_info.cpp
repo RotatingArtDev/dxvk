@@ -762,7 +762,7 @@ namespace dxvk {
       ENABLE_FEATURE(core.features, shaderFloat64, false),
       ENABLE_FEATURE(core.features, shaderImageGatherExtended, true),
       ENABLE_FEATURE(core.features, shaderInt16, false),
-      ENABLE_FEATURE(core.features, shaderInt64, true),
+      ENABLE_FEATURE(core.features, shaderInt64, false), // Changed from true to false for Android compatibility
       ENABLE_FEATURE(core.features, shaderUniformBufferArrayDynamicIndexing, false),
       ENABLE_FEATURE(core.features, shaderSampledImageArrayDynamicIndexing, true),
       ENABLE_FEATURE(core.features, shaderStorageBufferArrayDynamicIndexing, false),
@@ -923,12 +923,12 @@ namespace dxvk {
       ENABLE_EXT(khrLoadStoreOpNone, false),
 
       /* Maintenance features, relied on in various parts of the code */
-      ENABLE_EXT_FEATURE(khrMaintenance5, maintenance5, true),
-      ENABLE_EXT_FEATURE(khrMaintenance6, maintenance6, true),
+      ENABLE_EXT_FEATURE(khrMaintenance5, maintenance5, false), // Changed from true to false for Android compatibility
+      ENABLE_EXT_FEATURE(khrMaintenance6, maintenance6, false), // Changed from true to false for Android compatibility
       ENABLE_EXT_FEATURE(khrMaintenance7, maintenance7, false),
 
       /* Dependency for graphics pipeline library */
-      ENABLE_EXT(khrPipelineLibrary, true),
+      ENABLE_EXT(khrPipelineLibrary, false),
 
       /* Present wait, used for frame pacing and statistics */
       ENABLE_EXT_FEATURE(khrPresentId, presentId, false),

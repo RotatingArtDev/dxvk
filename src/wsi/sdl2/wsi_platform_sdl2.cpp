@@ -15,6 +15,8 @@ namespace dxvk::wsi {
         "SDL2.dll"
 #elif defined(__APPLE__)
         "libSDL2-2.0.0.dylib"
+#elif defined(__ANDROID__)
+        "libSDL2.so"
 #else
         "libSDL2-2.0.so.0"
 #endif

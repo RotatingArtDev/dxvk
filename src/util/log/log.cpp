@@ -4,6 +4,11 @@
 
 #include "../util_env.h"
 
+#ifdef __ANDROID__
+#include <android/log.h>
+#define DXVK_LOG_TAG "DXVK"
+#endif
+
 namespace dxvk {
   
   Logger::Logger(const std::string& fileName)
@@ -108,7 +113,21 @@ namespace dxvk {
           // output streams can crash certain games.
 #else
           // For native builds, logging to stderr should be fine.
+#ifdef __ANDROID__
+          // On Android, output to logcat
+          android_LogPriority priority = ANDROID_LOG_INFO;
+          switch (level) {
+            case LogLevel::Trace: priority = ANDROID_LOG_VERBOSE; break;
+            case LogLevel::Debug: priority = ANDROID_LOG_DEBUG; break;
+            case LogLevel::Info:  priority = ANDROID_LOG_INFO; break;
+            case LogLevel::Warn:  priority = ANDROID_LOG_WARN; break;
+            case LogLevel::Error: priority = ANDROID_LOG_ERROR; break;
+            default: break;
+          }
+          __android_log_print(priority, DXVK_LOG_TAG, "%s", adjusted.c_str());
+#else
           std::cerr << adjusted;
+#endif
 #endif
         }
 

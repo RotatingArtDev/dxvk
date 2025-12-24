@@ -1,0 +1,10 @@
+prefix=/mnt/d/Rotating-art-Launcher/app/src/main/cpp/SDL
+exec_prefix=${prefix}
+libdir=/mnt/d/Rotating-art-Launcher/app/build/intermediates/cxx/Debug/5w12473x/obj/arm64-v8a
+includedir=${prefix}/include
+
+Name: sdl2
+Description: Simple DirectMedia Layer for Android
+Version: 2.0.10
+Libs: -L${libdir} -lSDL2
+Cflags: -I${includedir}

@@ -149,7 +149,16 @@ else
   ]
 
   lib_sdl3 = dependency('sdl3', required: get_option('native_sdl3'))
-  lib_sdl2 = dependency('sdl2', required: get_option('native_sdl2'))
+  # For cross-compilation (Android), use manual SDL2 setup
+  if meson.is_cross_build() and get_option('native_sdl2').enabled()
+    # Manual SDL2 setup for Android cross-compilation
+    sdl2_inc = include_directories('/mnt/d/Rotating-art-Launcher/app/src/main/cpp/SDL/include')
+    sdl2_lib = cpp.find_library('SDL2', dirs: ['/mnt/d/Rotating-art-Launcher/app/build/intermediates/cxx/Debug/5w12473x/obj/arm64-v8a'], required: false)
+    lib_sdl2 = declare_dependency(include_directories: sdl2_inc, dependencies: sdl2_lib)
+  else
+    # Native build: try to find SDL2 via pkg-config
+    lib_sdl2 = dependency('sdl2', required: get_option('native_sdl2'))
+  endif
   lib_glfw = dependency('glfw', required: get_option('native_glfw'))
   if lib_sdl3.found()
     compiler_args += ['-DDXVK_WSI_SDL3']
@@ -171,6 +180,11 @@ else
     '-static-libgcc',
     '-static-libstdc++',
   ]
+  
+  # Add Android log library for cross-compilation (Android NDK)
+  if meson.is_cross_build()
+    link_args += [ '-llog' ]
+  endif
 endif
 
 dxbc_spirv = subproject('dxbc-spirv')

@@ -7,10 +7,62 @@
 #include "../util/util_string.h"
 #include "../util/util_win32_compat.h"
 
+#ifdef __ANDROID__
+#include <dlfcn.h>
+#include <cstdlib>
+#endif
+
 namespace dxvk::vk {
 
   static std::pair<HMODULE, PFN_vkGetInstanceProcAddr> loadVulkanLibrary() {
-    static const std::array<const char*, 2> dllNames = {{
+#ifdef __ANDROID__
+    // FORCED: Use pre-loaded Turnip driver via environment variables
+    // DO NOT load system libvulkan.so - it always picks Adreno
+    Logger::info("=== DXVK Vulkan Loader (Turnip Forced) ===");
+    
+    const char* vulkanPtrStr = getenv("VULKAN_PTR");
+    const char* vkGetInstanceProcAddrStr = getenv("VK_GET_INSTANCE_PROC_ADDR");
+    
+    Logger::info(str::format("VULKAN_PTR env = ", vulkanPtrStr ? vulkanPtrStr : "(null)"));
+    Logger::info(str::format("VK_GET_INSTANCE_PROC_ADDR env = ", vkGetInstanceProcAddrStr ? vkGetInstanceProcAddrStr : "(null)"));
+    
+    if (!vulkanPtrStr || !vkGetInstanceProcAddrStr) {
+      Logger::err("Vulkan: TURNIP environment variables not set! Cannot continue.");
+      Logger::err("Vulkan: Please ensure TurnipLoader runs before DXVK initialization.");
+      return { };
+    }
+    
+    uintptr_t vulkanHandle = 0;
+    uintptr_t procAddr = 0;
+    
+    // Parse 64-bit hex values (with or without 0x prefix)
+    if (vulkanPtrStr[0] == '0' && (vulkanPtrStr[1] == 'x' || vulkanPtrStr[1] == 'X')) {
+      vulkanHandle = static_cast<uintptr_t>(std::strtoull(vulkanPtrStr + 2, nullptr, 16));
+    } else {
+      vulkanHandle = static_cast<uintptr_t>(std::strtoull(vulkanPtrStr, nullptr, 16));
+    }
+    
+    if (vkGetInstanceProcAddrStr[0] == '0' && (vkGetInstanceProcAddrStr[1] == 'x' || vkGetInstanceProcAddrStr[1] == 'X')) {
+      procAddr = static_cast<uintptr_t>(std::strtoull(vkGetInstanceProcAddrStr + 2, nullptr, 16));
+    } else {
+      procAddr = static_cast<uintptr_t>(std::strtoull(vkGetInstanceProcAddrStr, nullptr, 16));
+    }
+    
+    Logger::info(str::format("Parsed VULKAN_PTR = 0x", std::hex, vulkanHandle));
+    Logger::info(str::format("Parsed VK_GET_INSTANCE_PROC_ADDR = 0x", std::hex, procAddr));
+    
+    if (!vulkanHandle || !procAddr) {
+      Logger::err("Vulkan: Failed to parse Turnip handles! Values are zero.");
+      return { };
+    }
+    
+    HMODULE library = reinterpret_cast<HMODULE>(vulkanHandle);
+    auto proc = reinterpret_cast<PFN_vkGetInstanceProcAddr>(procAddr);
+    
+    Logger::info("=== Using TURNIP driver directly! ===");
+    return std::make_pair(library, proc);
+#else
+    static const std::array<const char*, 3> dllNames = {{
 #ifdef _WIN32
       "winevulkan.dll",
       "vulkan-1.dll",
@@ -23,12 +75,15 @@ namespace dxvk::vk {
     for (auto dllName : dllNames) {
       HMODULE library = LoadLibraryA(dllName);
 
-      if (!library)
+      if (!library) {
+        Logger::warn(str::format("Vulkan: Failed to load ", dllName));
         continue;
+      }
 
       auto proc = GetProcAddress(library, "vkGetInstanceProcAddr");
 
       if (!proc) {
+        Logger::warn(str::format("Vulkan: vkGetInstanceProcAddr not found in ", dllName));
         FreeLibrary(library);
         continue;
       }
@@ -39,6 +94,7 @@ namespace dxvk::vk {
 
     Logger::err("Vulkan: vkGetInstanceProcAddr not found");
     return { };
+#endif
   }
 
   LibraryLoader::LibraryLoader() {

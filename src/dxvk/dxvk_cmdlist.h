@@ -639,8 +639,17 @@ namespace dxvk {
             VkDeviceSize            offset,
             VkDeviceSize            size,
             VkIndexType             indexType) {
-      m_vkd->vkCmdBindIndexBuffer2KHR(getCmdBuffer(),
-        buffer, offset, size, indexType);
+      // Fallback to vkCmdBindIndexBuffer if vkCmdBindIndexBuffer2KHR is not available
+      // (VK_KHR_maintenance5 not supported, e.g., on Adreno drivers)
+      if (m_vkd->vkCmdBindIndexBuffer2KHR) {
+        m_vkd->vkCmdBindIndexBuffer2KHR(getCmdBuffer(),
+          buffer, offset, size, indexType);
+      } else {
+        // vkCmdBindIndexBuffer doesn't have size parameter, just use it directly
+        m_vkd->vkCmdBindIndexBuffer(getCmdBuffer(),
+          buffer, offset, indexType);
+          //666
+      }
     }
 
 
